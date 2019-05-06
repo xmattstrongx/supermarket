@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/xmattstrongx/supermarket/api"
 
 	log "github.com/sirupsen/logrus"
@@ -10,8 +8,7 @@ import (
 )
 
 func daemonRun(cmd *cobra.Command, args []string) {
-	fmt.Println("GOo")
-
 	log.SetFormatter(&log.JSONFormatter{})
-	api.Serve()
+	server := api.NewServer()
+	server.Serve()
 }
