@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -105,6 +106,20 @@ func sortProduce(produce []models.Produce, queryParams queryParameters) []models
 			}
 		}
 	}
+
+	offset, err := strconv.ParseInt(queryParams.offset, 10, 0)
+	if err != nil || offset >= int64(len(sortedProduce)) || offset < 0 {
+		offset = 0
+	}
+
+	sortedProduce = sortedProduce[offset:]
+
+	limit, err := strconv.ParseInt(queryParams.limit, 10, 0)
+	if err != nil || limit > int64(len(sortedProduce)) || limit < 0 {
+		limit = int64(len(sortedProduce))
+	}
+
+	sortedProduce = sortedProduce[:limit]
 
 	return sortedProduce
 }

@@ -120,6 +120,86 @@ func Test_sortProduce(t *testing.T) {
 			},
 			want: produceSortedByProduceCodeDesc(),
 		},
+		{
+			name: "sort by name limit 2 offset 1",
+			args: args{
+				queryParameters{
+					sortBy: "name",
+					offset: "1",
+					limit:  "2",
+				},
+			},
+			want: produceSortedByNameLimit2Offset1(),
+		},
+		{
+			name: "sort by price desc limit 2 offset 0",
+			args: args{
+				queryParameters{
+					sortBy: "unitPrice",
+					order:  "desc",
+					offset: "0",
+					limit:  "2",
+				},
+			},
+			want: produceSortedByPriceLimit2Offset0Desc(),
+		},
+		{
+			name: "sort by produceCode desc offset 1",
+			args: args{
+				queryParameters{
+					sortBy: "produceCode",
+					order:  "desc",
+					offset: "1",
+				},
+			},
+			want: produceSortedByProductCodeOffset1Desc(),
+		},
+		{
+			name: "limit greater than length",
+			args: args{
+				queryParameters{
+					limit: string(len(generateTestProduceData()) + 1),
+				},
+			},
+			want: generateTestProduceData(),
+		},
+		{
+			name: "offset greater than length",
+			args: args{
+				queryParameters{
+					offset: string(len(generateTestProduceData())),
+				},
+			},
+			want: generateTestProduceData(),
+		},
+		{
+			name: "offset greater than length limit 2",
+			args: args{
+				queryParameters{
+					offset: string(len(generateTestProduceData())),
+					limit:  "2",
+				},
+			},
+			want: produceOffsetOverLengthLimit2(),
+		},
+		{
+			name: "offset is negative",
+			args: args{
+				queryParameters{
+					offset: "-1",
+				},
+			},
+			want: generateTestProduceData(),
+		},
+		{
+			name: "limit is negative",
+			args: args{
+				queryParameters{
+					limit: "-1",
+				},
+			},
+			want: generateTestProduceData(),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -266,6 +346,66 @@ func produceSortedByProduceCodeDesc() []models.Produce {
 			Name:        "Lettuce",
 			ProduceCode: "A12T-4GH7-QPL9-3N4M",
 			UnitPrice:   3.46,
+		},
+	}
+}
+
+func produceSortedByNameLimit2Offset1() []models.Produce {
+	return []models.Produce{
+		models.Produce{
+			Name:        "Lettuce",
+			ProduceCode: "A12T-4GH7-QPL9-3N4M",
+			UnitPrice:   3.46,
+		},
+		models.Produce{
+			Name:        "Peach",
+			ProduceCode: "E5T6-9UI3-TH15-QR88",
+			UnitPrice:   2.99,
+		},
+	}
+}
+
+func produceSortedByPriceLimit2Offset0Desc() []models.Produce {
+	return []models.Produce{
+		models.Produce{
+			Name:        "Lettuce",
+			ProduceCode: "A12T-4GH7-QPL9-3N4M",
+			UnitPrice:   3.46,
+		},
+		models.Produce{
+			Name:        "Peach",
+			ProduceCode: "E5T6-9UI3-TH15-QR88",
+			UnitPrice:   2.99,
+		},
+	}
+}
+
+func produceSortedByProductCodeOffset1Desc() []models.Produce {
+	return []models.Produce{
+		models.Produce{
+			Name:        "Peach",
+			ProduceCode: "E5T6-9UI3-TH15-QR88",
+			UnitPrice:   2.99,
+		},
+		models.Produce{
+			Name:        "Lettuce",
+			ProduceCode: "A12T-4GH7-QPL9-3N4M",
+			UnitPrice:   3.46,
+		},
+	}
+}
+
+func produceOffsetOverLengthLimit2() []models.Produce {
+	return []models.Produce{
+		models.Produce{
+			Name:        "Lettuce",
+			ProduceCode: "A12T-4GH7-QPL9-3N4M",
+			UnitPrice:   3.46,
+		},
+		models.Produce{
+			Name:        "Peach",
+			ProduceCode: "E5T6-9UI3-TH15-QR88",
+			UnitPrice:   2.99,
 		},
 	}
 }
