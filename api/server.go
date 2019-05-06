@@ -13,7 +13,7 @@ import (
 
 // ProduceManager is the interface between the API and the backend storage
 type ProduceManager interface {
-	ListProduce() ([]byte, error)
+	ListProduce(queryParameters) ([]models.Produce, error)
 	CreateProduce(models.Produce) (models.Produce, error)
 	DeleteProduce(string) error
 }

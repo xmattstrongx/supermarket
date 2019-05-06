@@ -5,6 +5,7 @@ import (
 	"math"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 
@@ -12,18 +13,38 @@ import (
 	"github.com/xmattstrongx/supermarket/models"
 )
 
+const (
+	SORTED_BY = "sortBy"
+	ORDER     = "order"
+	LIMIT     = "limit"
+	OFFSET    = "offset"
+)
+
+type queryParameters struct {
+	sortBy string
+	order  string
+	limit  string
+	offset string
+}
+
 // ListProduce is an API handlerFunc for listing all produce inventory in the DB
 func (s *Server) ListProduce(w http.ResponseWriter, r *http.Request) {
-	var b []byte
+	var produce []models.Produce
 	var err error
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		b, err = s.listProduce()
+		produce, err = s.listProduce(getQueryParams(r))
 	}()
 	wg.Wait()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	b, err := json.Marshal(produce)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -35,16 +56,57 @@ func (s *Server) ListProduce(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (s *Server) listProduce() ([]byte, error) {
+func (s *Server) listProduce(queryParams queryParameters) ([]models.Produce, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	b, err := json.Marshal(s.data)
-	if err != nil {
-		return nil, err
+	var produce []models.Produce
+	for _, val := range s.data {
+		produce = append(produce, val)
 	}
 
-	return b, nil
+	if queryParams.sortBy != "" {
+		produce = sortProduce(produce, queryParams)
+	}
+
+	return produce, nil
+}
+
+func sortProduce(produce []models.Produce, queryParams queryParameters) []models.Produce {
+	sortedProduce := make([]models.Produce, len(produce))
+
+	for i, val := range produce {
+		sortedProduce[i] = val
+	}
+
+	switch queryParams.sortBy {
+	case "name":
+		{
+			if queryParams.order == "desc" {
+				sort.Slice(sortedProduce, func(i, j int) bool { return sortedProduce[i].Name > sortedProduce[j].Name })
+			} else {
+				sort.Slice(sortedProduce, func(i, j int) bool { return sortedProduce[i].Name < sortedProduce[j].Name })
+			}
+		}
+	case "produceCode":
+		{
+			if queryParams.order == "desc" {
+				sort.Slice(sortedProduce, func(i, j int) bool { return sortedProduce[i].ProduceCode > sortedProduce[j].ProduceCode })
+			} else {
+				sort.Slice(sortedProduce, func(i, j int) bool { return sortedProduce[i].ProduceCode < sortedProduce[j].ProduceCode })
+			}
+		}
+	case "unitPrice":
+		{
+			if queryParams.order == "desc" {
+				sort.Slice(sortedProduce, func(i, j int) bool { return sortedProduce[i].UnitPrice > sortedProduce[j].UnitPrice })
+			} else {
+				sort.Slice(sortedProduce, func(i, j int) bool { return sortedProduce[i].UnitPrice < sortedProduce[j].UnitPrice })
+			}
+		}
+	}
+
+	return sortedProduce
 }
 
 // CreateProduce is an API handlerFunc for adding new produce(s) to the DB
@@ -84,12 +146,10 @@ func (s *Server) CreateProduce(w http.ResponseWriter, r *http.Request) {
 	}
 	wg.Wait()
 
-	resp := &models.CreateProduceReponse{
+	js, err := json.Marshal(&models.CreateProduceResponse{
 		Created: validProduce,
 		Invalid: invalidProduce,
-	}
-
-	js, err := json.Marshal(resp)
+	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -152,4 +212,14 @@ func (s *Server) deleteProduce(produceCode string) error {
 func isValidProduceCode(produceCode string) bool {
 	validProduceCode := regexp.MustCompile(`[a-zA-Z0-9]{4}\-[a-zA-Z0-9]{4}\-[a-zA-Z0-9]{4}\-[a-zA-Z0-9]{4}`)
 	return validProduceCode.MatchString(produceCode)
+}
+
+func getQueryParams(r *http.Request) queryParameters {
+	query := r.URL.Query()
+	return queryParameters{
+		sortBy: query.Get(SORTED_BY),
+		order:  query.Get(ORDER),
+		limit:  query.Get(LIMIT),
+		offset: query.Get(OFFSET),
+	}
 }

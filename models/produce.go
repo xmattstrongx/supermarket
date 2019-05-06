@@ -6,7 +6,7 @@ type Produce struct {
 	UnitPrice   float64 `json:"unitPrice"`
 }
 
-type CreateProduceReponse struct {
+type CreateProduceResponse struct {
 	Created []Produce `json:"created"`
 	Invalid []Produce `json:"createFailed"`
 }
