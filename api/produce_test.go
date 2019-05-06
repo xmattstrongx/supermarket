@@ -26,9 +26,16 @@ func Test_isValidProduceCode(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "invalid product code",
+			name: "invalid product code only three sets",
 			args: args{
 				produceCode: "a12T-4Gh7-QpL9-",
+			},
+			want: false,
+		},
+		{
+			name: "invalid product code special character !",
+			args: args{
+				produceCode: "a12T-4Gh7-QpL9-ALL!",
 			},
 			want: false,
 		},

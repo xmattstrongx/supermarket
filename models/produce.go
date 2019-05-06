@@ -5,3 +5,8 @@ type Produce struct {
 	ProduceCode string  `json:"produceCode"`
 	UnitPrice   float64 `json:"unitPrice"`
 }
+
+type CreateProduceReponse struct {
+	Created []Produce `json:"created"`
+	Invalid []Produce `json:"createFailed"`
+}
