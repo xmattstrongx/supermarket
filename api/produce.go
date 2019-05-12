@@ -156,9 +156,11 @@ func (s *Server) CreateProduce(w http.ResponseWriter, r *http.Request) {
 	validProduce, invalidProduce := s.filterNewProduceRequest(*newProduceRequest)
 	createdProduce, failedProduce := s.createAllProduce(validProduce)
 
+	failedProduce = append(failedProduce, invalidProduce...)
+
 	js, err := json.Marshal(&models.CreateProduceResponse{
 		Created: createdProduce,
-		Invalid: append(failedProduce, invalidProduce...),
+		Invalid: failedProduce,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -167,10 +169,9 @@ func (s *Server) CreateProduce(w http.ResponseWriter, r *http.Request) {
 
 	status := http.StatusCreated
 	switch {
-	case len(failedProduce) > 0 && len(validProduce) > 0:
+	case len(failedProduce) > 0 && len(createdProduce) > 0:
 		status = http.StatusMultiStatus
-	case len(failedProduce) > 0 && len(validProduce) == 0:
-		// TODO decide if an error should be returned for each specific failure
+	case len(failedProduce) > 0 && len(createdProduce) == 0:
 		status = http.StatusBadRequest
 	}
 

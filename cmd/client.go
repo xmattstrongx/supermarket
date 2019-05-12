@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -120,4 +121,33 @@ func (p *produceClient) deleteProduce(produceCode string) ([]byte, int, error) {
 	}
 
 	return bodyBytes, resp.StatusCode, nil
+}
+
+func (p *produceClient) createProduce(newProduce []byte) (*models.CreateProduceResponse, int, error) {
+	url := fmt.Sprintf("%s/api/v1/produce", p.endpoint)
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(newProduce))
+	if err != nil {
+		return nil, 0, err
+	}
+
+	fmt.Println(url)
+
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	defer resp.Body.Close()
+
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	createProduceResponse := &models.CreateProduceResponse{}
+	if err := json.Unmarshal(bodyBytes, createProduceResponse); err != nil {
+		return nil, 0, err
+	}
+
+	return createProduceResponse, resp.StatusCode, nil
 }

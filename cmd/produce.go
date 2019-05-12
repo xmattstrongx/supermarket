@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// '[{"name":"fumanchu","produceCode":"XX1X-4GH7-QPL9-3N4M","unitPrice": 1.13333}]'
+
 var (
 	produceClientCmd = &cobra.Command{
 		Use:     "produce",
@@ -33,12 +35,19 @@ var (
 		Run:     produceClientDelete,
 	}
 
+	produceClientCreateCmd = &cobra.Command{
+		Use:     "create",
+		Aliases: []string{"c"},
+		Short:   "bulk create of produce items to the inventory",
+		Run:     produceClientCreate,
+	}
+
 	produceClientListCmdParamSortBy string
 	produceClientListCmdParamOrder  string
 	produceClientListCmdParamLimit  string
 	produceClientListCmdParamOffset string
 
-	produceClientDeleteCmdParamProduceCode string
+	produceClientCreateCmdParamRequestBody string
 )
 
 func init() {
@@ -52,7 +61,9 @@ func init() {
 	produceClientListCmd.Flags().StringVar(&produceClientListCmdParamOffset, "offset", "", "optional value to choose many items to start offset the response values. If an invalid value is passed this parameter will be ignored.")
 
 	produceClientCmd.AddCommand(produceClientDeleteCmd)
-	produceClientDeleteCmd.Flags().StringVar(&produceClientDeleteCmdParamProduceCode, "sort_by", "", "optional value to choose how list response is sorted. Available case insensitive values are name, producecode, unitprice.")
+
+	produceClientCreateCmd.Flags().StringVar(&produceClientCreateCmdParamRequestBody, "request", "", "request body of produce to create")
+	produceClientCmd.AddCommand(produceClientCreateCmd)
 }
 
 func produceClientList(cmd *cobra.Command, args []string) {
@@ -99,6 +110,23 @@ func produceClientDelete(cmd *cobra.Command, args []string) {
 
 	printResponse(resp, statusCode)
 
+}
+
+func produceClientCreate(cmd *cobra.Command, args []string) {
+	client, err := newClient(
+		withEndpoint(produceClientCmdEndpoint),
+		withTimeout(produceClientCmdTimeout),
+	)
+	if err != nil {
+		log.Fatalf("failed to create produce client: %s", err)
+	}
+
+	resp, statusCode, err := client.createProduce([]byte(produceClientCreateCmdParamRequestBody))
+	if err != nil {
+		log.Fatalf("failed to create produce: %s", err)
+	}
+
+	printResponse(resp, statusCode)
 }
 
 func printResponse(obj interface{}, statusCode int) {
