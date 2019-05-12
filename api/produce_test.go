@@ -1,6 +1,9 @@
 package api
 
 import (
+	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 
@@ -210,202 +213,190 @@ func Test_sortProduce(t *testing.T) {
 	}
 }
 
-func generateTestProduceData() []models.Produce {
-	return []models.Produce{
-		models.Produce{
-			Name:        "Lettuce",
-			ProduceCode: "A12T-4GH7-QPL9-3N4M",
-			UnitPrice:   3.46,
-		},
-		models.Produce{
-			Name:        "Peach",
-			ProduceCode: "E5T6-9UI3-TH15-QR88",
-			UnitPrice:   2.99,
-		},
-		models.Produce{
-			Name:        "Green Pepper",
-			ProduceCode: "YRT6-72AS-K736-L4AR",
-			UnitPrice:   0.79,
-		},
+func TestListProduce(t *testing.T) {
+	s := NewServer()
+	req, err := http.NewRequest(http.MethodGet, "/produce", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(s.ListProduce)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the response body is what we expect.
+	expected := `[{"name":"Lettuce","produceCode":"A12T-4GH7-QPL9-3N4M","unitPrice":3.46},{"name":"Peach","produceCode":"E5T6-9UI3-TH15-QR88","unitPrice":2.99},{"name":"Green Pepper","produceCode":"YRT6-72AS-K736-L4AR","unitPrice":0.79},{"name":"Gala Apple","produceCode":"TQ4C-VV6T-75ZX-1RMR","unitPrice":3.59}]`
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
 	}
 }
 
-func produceSortedByNameAsc() []models.Produce {
-	return []models.Produce{
-		models.Produce{
-			Name:        "Green Pepper",
-			ProduceCode: "YRT6-72AS-K736-L4AR",
-			UnitPrice:   0.79,
-		},
-		models.Produce{
-			Name:        "Lettuce",
-			ProduceCode: "A12T-4GH7-QPL9-3N4M",
-			UnitPrice:   3.46,
-		},
-		models.Produce{
-			Name:        "Peach",
-			ProduceCode: "E5T6-9UI3-TH15-QR88",
-			UnitPrice:   2.99,
-		},
+func TestListProduceSortByName(t *testing.T) {
+	s := NewServer()
+	req, err := http.NewRequest(http.MethodGet, "/produce?sort_by=name", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(s.ListProduce)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the response body is what we expect.
+	expected := `[{"name":"Gala Apple","produceCode":"TQ4C-VV6T-75ZX-1RMR","unitPrice":3.59},{"name":"Green Pepper","produceCode":"YRT6-72AS-K736-L4AR","unitPrice":0.79},{"name":"Lettuce","produceCode":"A12T-4GH7-QPL9-3N4M","unitPrice":3.46},{"name":"Peach","produceCode":"E5T6-9UI3-TH15-QR88","unitPrice":2.99}]`
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
 	}
 }
 
-func produceSortedByNameDesc() []models.Produce {
-	return []models.Produce{
-		models.Produce{
-			Name:        "Peach",
-			ProduceCode: "E5T6-9UI3-TH15-QR88",
-			UnitPrice:   2.99,
-		},
-		models.Produce{
-			Name:        "Lettuce",
-			ProduceCode: "A12T-4GH7-QPL9-3N4M",
-			UnitPrice:   3.46,
-		},
-		models.Produce{
-			Name:        "Green Pepper",
-			ProduceCode: "YRT6-72AS-K736-L4AR",
-			UnitPrice:   0.79,
-		},
+func TestListProduceSortByProduceCode(t *testing.T) {
+	s := NewServer()
+
+	req, err := http.NewRequest(http.MethodGet, "/produce?sort_by=produceCode", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(s.ListProduce)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the response body is what we expect.
+	expected := `[{"name":"Lettuce","produceCode":"A12T-4GH7-QPL9-3N4M","unitPrice":3.46},{"name":"Peach","produceCode":"E5T6-9UI3-TH15-QR88","unitPrice":2.99},{"name":"Gala Apple","produceCode":"TQ4C-VV6T-75ZX-1RMR","unitPrice":3.59},{"name":"Green Pepper","produceCode":"YRT6-72AS-K736-L4AR","unitPrice":0.79}]`
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
 	}
 }
 
-func produceSortedByPriceAsc() []models.Produce {
-	return []models.Produce{
-		models.Produce{
-			Name:        "Green Pepper",
-			ProduceCode: "YRT6-72AS-K736-L4AR",
-			UnitPrice:   0.79,
-		},
-		models.Produce{
-			Name:        "Peach",
-			ProduceCode: "E5T6-9UI3-TH15-QR88",
-			UnitPrice:   2.99,
-		},
-		models.Produce{
-			Name:        "Lettuce",
-			ProduceCode: "A12T-4GH7-QPL9-3N4M",
-			UnitPrice:   3.46,
-		},
+func TestListProduceSortByUnitPrice(t *testing.T) {
+	s := NewServer()
+
+	req, err := http.NewRequest(http.MethodGet, "/produce?sort_by=unitPrice", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(s.ListProduce)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the response body is what we expect.
+	expected := `[{"name":"Green Pepper","produceCode":"YRT6-72AS-K736-L4AR","unitPrice":0.79},{"name":"Peach","produceCode":"E5T6-9UI3-TH15-QR88","unitPrice":2.99},{"name":"Lettuce","produceCode":"A12T-4GH7-QPL9-3N4M","unitPrice":3.46},{"name":"Gala Apple","produceCode":"TQ4C-VV6T-75ZX-1RMR","unitPrice":3.59}]`
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
 	}
 }
 
-func produceSortedByPriceDesc() []models.Produce {
-	return []models.Produce{
-		models.Produce{
-			Name:        "Lettuce",
-			ProduceCode: "A12T-4GH7-QPL9-3N4M",
-			UnitPrice:   3.46,
-		},
-		models.Produce{
-			Name:        "Peach",
-			ProduceCode: "E5T6-9UI3-TH15-QR88",
-			UnitPrice:   2.99,
-		},
-		models.Produce{
-			Name:        "Green Pepper",
-			ProduceCode: "YRT6-72AS-K736-L4AR",
-			UnitPrice:   0.79,
-		},
+func TestCreateProduce(t *testing.T) {
+	s := NewServer()
+
+	req, err := http.NewRequest(http.MethodPost, "/produce", bytes.NewBuffer([]byte(`[{"name":"fumanchu","produceCode":"XX1X-4GH7-QPL9-3N4M","unitPrice": 1.13333}]`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(s.CreateProduce)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusCreated {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusCreated)
+	}
+
+	// Check the response body is what we expect.
+	expected := `{"created":[{"name":"fumanchu","produceCode":"XX1X-4GH7-QPL9-3N4M","unitPrice":1.13}],"createFailed":[]}`
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
 	}
 }
 
-func produceSortedByProduceCodeAsc() []models.Produce {
-	return []models.Produce{
-		models.Produce{
-			Name:        "Lettuce",
-			ProduceCode: "A12T-4GH7-QPL9-3N4M",
-			UnitPrice:   3.46,
-		},
-		models.Produce{
-			Name:        "Peach",
-			ProduceCode: "E5T6-9UI3-TH15-QR88",
-			UnitPrice:   2.99,
-		},
-		models.Produce{
-			Name:        "Green Pepper",
-			ProduceCode: "YRT6-72AS-K736-L4AR",
-			UnitPrice:   0.79,
-		},
+func TestCreateProduceBadRequest(t *testing.T) {
+	s := NewServer()
+
+	req, err := http.NewRequest(http.MethodPost, "/produce", bytes.NewBuffer([]byte(`[{"name":"fumanchu","produceCode":"invalid","unitPrice": 1.13333}]`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(s.CreateProduce)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusCreated)
+	}
+
+	// Check the response body is what we expect.
+	expected := ` {"created":[],"createFailed":[{"name":"fumanchu","produceCode":"invalid","unitPrice":1.13333}]}`
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
 	}
 }
 
-func produceSortedByProduceCodeDesc() []models.Produce {
-	return []models.Produce{
-		models.Produce{
-			Name:        "Green Pepper",
-			ProduceCode: "YRT6-72AS-K736-L4AR",
-			UnitPrice:   0.79,
-		},
-		models.Produce{
-			Name:        "Peach",
-			ProduceCode: "E5T6-9UI3-TH15-QR88",
-			UnitPrice:   2.99,
-		},
-		models.Produce{
-			Name:        "Lettuce",
-			ProduceCode: "A12T-4GH7-QPL9-3N4M",
-			UnitPrice:   3.46,
-		},
+func TestCreateProduceValidAndInvalidRequests(t *testing.T) {
+	s := NewServer()
+
+	req, err := http.NewRequest(http.MethodPost, "/produce", bytes.NewBuffer([]byte(`[{"name":"fumanchu","produceCode":"XX1X-4GH7-QPL9-3N4M","unitPrice": 1.13333},{"name":"fumanchu","produceCode":"XX1X-4GH7-QPL9-","unitPrice": 1.00}]`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(s.CreateProduce)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusMultiStatus {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusCreated)
+	}
+
+	// Check the response body is what we expect.
+	expected := `{"created":[{"name":"fumanchu","produceCode":"XX1X-4GH7-QPL9-3N4M","unitPrice":1.13}],"createFailed":[{"name":"fumanchu","produceCode":"XX1X-4GH7-QPL9-","unitPrice":1}]}`
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
 	}
 }
 
-func produceSortedByNameLimit2Offset1() []models.Produce {
-	return []models.Produce{
-		models.Produce{
-			Name:        "Lettuce",
-			ProduceCode: "A12T-4GH7-QPL9-3N4M",
-			UnitPrice:   3.46,
-		},
-		models.Produce{
-			Name:        "Peach",
-			ProduceCode: "E5T6-9UI3-TH15-QR88",
-			UnitPrice:   2.99,
-		},
-	}
-}
+func TestDeleteProduce(t *testing.T) {
+	s := NewServer()
 
-func produceSortedByPriceLimit2Offset0Desc() []models.Produce {
-	return []models.Produce{
-		models.Produce{
-			Name:        "Lettuce",
-			ProduceCode: "A12T-4GH7-QPL9-3N4M",
-			UnitPrice:   3.46,
-		},
-		models.Produce{
-			Name:        "Peach",
-			ProduceCode: "E5T6-9UI3-TH15-QR88",
-			UnitPrice:   2.99,
-		},
+	req, err := http.NewRequest(http.MethodDelete, "/produce/A12T-4GH7-QPL9-3N4M", nil)
+	if err != nil {
+		t.Fatal(err)
 	}
-}
 
-func produceSortedByProductCodeOffset1Desc() []models.Produce {
-	return []models.Produce{
-		models.Produce{
-			Name:        "Peach",
-			ProduceCode: "E5T6-9UI3-TH15-QR88",
-			UnitPrice:   2.99,
-		},
-		models.Produce{
-			Name:        "Lettuce",
-			ProduceCode: "A12T-4GH7-QPL9-3N4M",
-			UnitPrice:   3.46,
-		},
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(s.DeleteProduce)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusNoContent {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusCreated)
 	}
-}
 
-func produceOffsetOverLengthLimit2() []models.Produce {
-	return []models.Produce{
-		models.Produce{
-			Name:        "Lettuce",
-			ProduceCode: "A12T-4GH7-QPL9-3N4M",
-			UnitPrice:   3.46,
-		},
-		models.Produce{
-			Name:        "Peach",
-			ProduceCode: "E5T6-9UI3-TH15-QR88",
-			UnitPrice:   2.99,
-		},
+	// Check the response body is what we expect.
+	expected := ``
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
 	}
 }
