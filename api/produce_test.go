@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -228,11 +229,68 @@ func TestListProduce(t *testing.T) {
 	}
 
 	// Check the response body is what we expect.
-	expected := `[{"name":"Lettuce","produceCode":"A12T-4GH7-QPL9-3N4M","unitPrice":3.46},{"name":"Peach","produceCode":"E5T6-9UI3-TH15-QR88","unitPrice":2.99},{"name":"Green Pepper","produceCode":"YRT6-72AS-K736-L4AR","unitPrice":0.79},{"name":"Gala Apple","produceCode":"TQ4C-VV6T-75ZX-1RMR","unitPrice":3.59}]`
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+	produce := []models.Produce{}
+	if err := json.Unmarshal([]byte(rr.Body.String()), &produce); err != nil {
+		t.Errorf("Failed to unmarshal response: %s", err)
 	}
+
+	if len(produce) != 4 {
+		t.Errorf("response array has unexpected length got %d want %d", len(produce), 4)
+	}
+
+	contains := func(list []models.Produce, find models.Produce) bool {
+		for _, val := range list {
+			if val == find {
+				return true
+			}
+		}
+		return false
+	}
+
+	if ok := contains(
+		produce,
+		models.Produce{
+			Name:        "Peach",
+			ProduceCode: "E5T6-9UI3-TH15-QR88",
+			UnitPrice:   2.99,
+		},
+	); !ok {
+		t.Errorf("response array does not contain expected field")
+	}
+
+	if ok := contains(
+		produce,
+		models.Produce{
+			Name:        "Green Pepper",
+			ProduceCode: "YRT6-72AS-K736-L4AR",
+			UnitPrice:   0.79,
+		},
+	); !ok {
+		t.Errorf("response array does not contain expected field")
+	}
+
+	if ok := contains(
+		produce,
+		models.Produce{
+			Name:        "Gala Apple",
+			ProduceCode: "TQ4C-VV6T-75ZX-1RMR",
+			UnitPrice:   3.59,
+		},
+	); !ok {
+		t.Errorf("response array does not contain expected field")
+	}
+
+	if ok := contains(
+		produce,
+		models.Produce{
+			Name:        "Lettuce",
+			ProduceCode: "A12T-4GH7-QPL9-3N4M",
+			UnitPrice:   3.46,
+		},
+	); !ok {
+		t.Errorf("response array does not contain expected field")
+	}
+
 }
 
 func TestListProduceSortByName(t *testing.T) {
