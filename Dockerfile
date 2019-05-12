@@ -19,5 +19,4 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build github.com/xmattstrongx/super
 # copy the prebuilt daemon to tiny scratch image
 FROM scratch
 COPY --from=builder /app/supermarket /bin/
-EXPOSE 8080
-ENTRYPOINT ["/bin/supermarket"]
+CMD ["/bin/supermarket","daemon"]

@@ -63,6 +63,16 @@ func (s *Server) ListProduce(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func getQueryParams(r *http.Request) queryParameters {
+	query := r.URL.Query()
+	return queryParameters{
+		sortBy: query.Get(SORTED_BY),
+		order:  query.Get(ORDER),
+		limit:  query.Get(LIMIT),
+		offset: query.Get(OFFSET),
+	}
+}
+
 func (s *Server) listProduce(queryParams queryParameters) ([]models.Produce, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -79,6 +89,8 @@ func (s *Server) listProduce(queryParams queryParameters) ([]models.Produce, err
 	return produce, nil
 }
 
+// sortProduce will attempt to sort the produce slice passed in based on the query parameters
+// provided by the request.
 func sortProduce(produce []models.Produce, queryParams queryParameters) []models.Produce {
 	sortedProduce := make([]models.Produce, len(produce))
 
@@ -115,7 +127,7 @@ func sortProduce(produce []models.Produce, queryParams queryParameters) []models
 		}
 	}
 
-	// TODO revisit this pagination logic
+	// first split the produce by the offset
 	offset, err := strconv.ParseInt(queryParams.offset, 10, 0)
 	if err != nil || offset >= int64(len(sortedProduce)) || offset < 0 {
 		offset = 0
@@ -123,29 +135,55 @@ func sortProduce(produce []models.Produce, queryParams queryParameters) []models
 
 	sortedProduce = sortedProduce[offset:]
 
+	// next split the produce so that only the limit requested is returned
 	limit, err := strconv.ParseInt(queryParams.limit, 10, 0)
 	if err != nil || limit > int64(len(sortedProduce)) || limit < 0 {
 		limit = int64(len(sortedProduce))
 	}
 
-	sortedProduce = sortedProduce[:limit]
-
-	return sortedProduce
+	return sortedProduce[:limit]
 }
 
 // CreateProduce is an API handlerFunc for adding new produce(s) to the DB
 func (s *Server) CreateProduce(w http.ResponseWriter, r *http.Request) {
-	newProduce := &[]models.Produce{}
-	err := json.NewDecoder(r.Body).Decode(newProduce) //decode the request body into struct and failed if any error occur
+	newProduceRequest := &[]models.Produce{}
+	err := json.NewDecoder(r.Body).Decode(newProduceRequest) //decode the request body into struct and failed if any error occur
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	validProduce, invalidProduce := s.filterNewProduceRequest(*newProduceRequest)
+	createdProduce, failedProduce := s.createAllProduce(validProduce)
+
+	js, err := json.Marshal(&models.CreateProduceResponse{
+		Created: createdProduce,
+		Invalid: append(failedProduce, invalidProduce...),
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	status := http.StatusCreated
+	switch {
+	case len(failedProduce) > 0 && len(validProduce) > 0:
+		status = http.StatusMultiStatus
+	case len(failedProduce) > 0 && len(validProduce) == 0:
+		// TODO decide if an error should be returned for each specific failure
+		status = http.StatusBadRequest
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	w.Write(js)
+	return
+}
+
+func (s *Server) filterNewProduceRequest(newProduce []models.Produce) ([]models.Produce, []models.Produce) {
 	validProduce := []models.Produce{}
 	failedProduce := []models.Produce{}
-
-	for _, val := range *newProduce {
+	for _, val := range newProduce {
 		if _, exists := s.data[strings.ToUpper(val.ProduceCode)]; exists {
 			failedProduce = append(failedProduce, val)
 			continue
@@ -158,24 +196,34 @@ func (s *Server) CreateProduce(w http.ResponseWriter, r *http.Request) {
 
 		validProduce = append(validProduce, val)
 	}
+	return validProduce, failedProduce
+}
 
+func isValidProduceCode(produceCode string) bool {
+	validProduceCode := regexp.MustCompile(`[a-zA-Z0-9]{4}\-[a-zA-Z0-9]{4}\-[a-zA-Z0-9]{4}\-[a-zA-Z0-9]{4}`)
+	return validProduceCode.MatchString(produceCode)
+}
+
+// createAllProduce will attempt to add every produce passed in by newProduce
+// It will return a slice of all created produce and failed produce for error reporting.
+func (s *Server) createAllProduce(newProduce []models.Produce) ([]models.Produce, []models.Produce) {
 	type createResponse struct {
 		successful *models.Produce
 		failed     *models.Produce
 	}
 
 	createdProduce := []models.Produce{}
+	failedProduce := []models.Produce{}
 	ch := make(chan createResponse)
-	done := make(chan struct{})
 	wgSelect := sync.WaitGroup{}
 	wgSelect.Add(1)
 
 	go func() {
-		for done != nil {
+		for ch != nil {
 			select {
 			case x, ok := <-ch:
 				if !ok {
-					done = nil
+					ch = nil
 					wgSelect.Done()
 					break
 				}
@@ -194,10 +242,11 @@ func (s *Server) CreateProduce(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	wg := sync.WaitGroup{}
-	for _, val := range validProduce {
+	for _, val := range newProduce {
 		wg.Add(1)
 		go func(val models.Produce, ch chan createResponse) {
 			defer wg.Done()
+
 			p, err := s.createProduce(val)
 			if err != nil {
 				ch <- createResponse{
@@ -205,6 +254,7 @@ func (s *Server) CreateProduce(w http.ResponseWriter, r *http.Request) {
 				}
 				return
 			}
+
 			ch <- createResponse{
 				successful: &p,
 			}
@@ -215,29 +265,7 @@ func (s *Server) CreateProduce(w http.ResponseWriter, r *http.Request) {
 	close(ch)
 	wgSelect.Wait()
 
-	js, err := json.Marshal(&models.CreateProduceResponse{
-		Created: createdProduce,
-		Invalid: failedProduce,
-	})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	status := http.StatusCreated
-	switch {
-	case len(failedProduce) > 0 && len(validProduce) > 0:
-		status = http.StatusMultiStatus
-	case len(failedProduce) > 0 && len(validProduce) == 0:
-		// TODO decide if an error should be returned for each specific failure
-		status = http.StatusBadRequest
-	default:
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	w.Write(js)
-	return
+	return createdProduce, failedProduce
 }
 
 // createProduce cannot return an error in this implementation
@@ -279,19 +307,4 @@ func (s *Server) deleteProduce(produceCode string) error {
 	defer s.mutex.Unlock()
 	delete(s.data, produceCode)
 	return nil
-}
-
-func isValidProduceCode(produceCode string) bool {
-	validProduceCode := regexp.MustCompile(`[a-zA-Z0-9]{4}\-[a-zA-Z0-9]{4}\-[a-zA-Z0-9]{4}\-[a-zA-Z0-9]{4}`)
-	return validProduceCode.MatchString(produceCode)
-}
-
-func getQueryParams(r *http.Request) queryParameters {
-	query := r.URL.Query()
-	return queryParameters{
-		sortBy: query.Get(SORTED_BY),
-		order:  query.Get(ORDER),
-		limit:  query.Get(LIMIT),
-		offset: query.Get(OFFSET),
-	}
 }

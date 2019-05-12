@@ -8,9 +8,12 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "daemon",
-	Short: "daemon runs the supermarket daemon as a docker container",
-	Run:   daemonRun,
+	Long: "CLI for the supermarket API. From here we can start up a new daemon or use the client(s) to interact with it",
+}
+
+func init() {
+	rootCmd.AddCommand(daemonCmd)
+	rootCmd.AddCommand(produceClientCmd)
 }
 
 func Execute() {
