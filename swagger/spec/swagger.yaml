@@ -5,7 +5,7 @@ info:
   license:
     name: MIT
 servers:
-  - url: http://localhost:8080/api/v1
+  - url: http://localhost:8000/api/v1
 paths:
   /produce:
     get:
@@ -53,53 +53,48 @@ paths:
           content:
             application/json:    
               schema:
-                $ref: "#/components/schemas/Produce"
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+                $ref: "#/components/schemas/Produces"
     post:
-      summary: Create a pet
-      operationId: createPets
+      summary: Create new produce
+      description: Creates a new produce in the inventory.  Duplicates are not allowed
+      operationId: createProduce
+      required: true
+      requestBody:
+        description: Produce to add to the inventory
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/produce'
+            example:
+              name: poo pourri
+              produceCode: POO1-POO2-POO3-POO4
+              unitPrice: 6.01
       tags:
-        - pets
+        - produce
       responses:
         '201':
           description: Null response
-        default:
+        '400':
           description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-  /pets/{petId}:
-    get:
-      summary: Info for a specific pet
-      operationId: showPetById
+        '404':
+          description: unexpected error
+  /produce/{produceId}:
+    delete:
+      summary: Delete a specific produce
+      operationId: deleteProduceById
       tags:
-        - pets
+        - produce
       parameters:
-        - name: petId
+        - name: produceId
           in: path
           required: true
-          description: The id of the pet to retrieve
+          description: The id of the produce to delete
           schema:
             type: string
       responses:
-        '200':
-          description: Expected response to a valid request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Pets"
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+        '204':
+          description: 204 response regardless of whether or not the request succeeds or fails
 components:
   schemas:
     Produce:
@@ -113,19 +108,16 @@ components:
         produceCode:
           type: string
         unitPrice:
-          type: integer
-          format: int64
-    Pets:
+          type: number
+          format: float64
+    Produces:
       type: array
       items:
-        $ref: "#/components/schemas/Pet"
-    Error:
-      required:
-        - code
-        - message
+        $ref: "#/components/schemas/Produce"
+    CreateProduceMultiResponse:
+      type: object
       properties:
-        code:
-          type: integer
-          format: int32
-        message:
-          type: string
+        created:
+          $ref: "#/components/schemas/Produce"
+        createFailed:
+          $ref: "#/components/schemas/Produce"

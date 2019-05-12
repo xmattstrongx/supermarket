@@ -46,7 +46,7 @@ func (s *Server) Serve() {
 
 	port := os.Getenv("PORT") //Get port from .env file, we did not specify any port so this should return an empty string when tested locally
 	if port == "" {
-		port = "8080" //localhost
+		port = "8000" //localhost
 	}
 
 	router.HandleFunc("/api/v1/produce", s.ListProduce).Methods(http.MethodGet)

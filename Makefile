@@ -20,7 +20,7 @@ build:
 	docker build . -t supermarket:$(VERSION) || exit 1;
 
 run:
-	docker run --rm -it -p 8080:8080 supermarket:$(VERSION)
+	docker run --rm -it -p 8000:8000 supermarket:$(VERSION)
 
 install:
 	go install github.com/xmattstrongx/supermarket
