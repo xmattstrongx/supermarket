@@ -143,36 +143,81 @@ func (s *Server) CreateProduce(w http.ResponseWriter, r *http.Request) {
 	}
 
 	validProduce := []models.Produce{}
-	invalidProduce := []models.Produce{}
-	wg := sync.WaitGroup{}
+	failedProduce := []models.Produce{}
 
 	for _, val := range *newProduce {
 		if _, exists := s.data[strings.ToUpper(val.ProduceCode)]; exists {
-			invalidProduce = append(invalidProduce, val)
-			break
+			failedProduce = append(failedProduce, val)
+			continue
 		}
 
 		if !isValidProduceCode(val.ProduceCode) {
-			invalidProduce = append(invalidProduce, val)
-			break
+			failedProduce = append(failedProduce, val)
+			continue
 		}
 
+		validProduce = append(validProduce, val)
+	}
+
+	type createResponse struct {
+		successful *models.Produce
+		failed     *models.Produce
+	}
+
+	createdProduce := []models.Produce{}
+	ch := make(chan createResponse)
+	done := make(chan struct{})
+	wgSelect := sync.WaitGroup{}
+	wgSelect.Add(1)
+
+	go func() {
+		for done != nil {
+			select {
+			case x, ok := <-ch:
+				if !ok {
+					done = nil
+					wgSelect.Done()
+					break
+				}
+				if x.successful != nil {
+					s.mutex.Lock()
+					createdProduce = append(createdProduce, *x.successful)
+					s.mutex.Unlock()
+				}
+				if x.failed != nil {
+					s.mutex.Lock()
+					failedProduce = append(failedProduce, *x.successful)
+					s.mutex.Unlock()
+				}
+			}
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	for _, val := range validProduce {
 		wg.Add(1)
-		go func(val models.Produce) {
+		go func(val models.Produce, ch chan createResponse) {
 			defer wg.Done()
 			p, err := s.createProduce(val)
 			if err != nil {
-				invalidProduce = append(invalidProduce, val)
+				ch <- createResponse{
+					failed: &val,
+				}
 				return
 			}
-			validProduce = append(validProduce, p)
-		}(val)
+			ch <- createResponse{
+				successful: &p,
+			}
+		}(val, ch)
 	}
+
 	wg.Wait()
+	close(ch)
+	wgSelect.Wait()
 
 	js, err := json.Marshal(&models.CreateProduceResponse{
-		Created: validProduce,
-		Invalid: invalidProduce,
+		Created: createdProduce,
+		Invalid: failedProduce,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -181,9 +226,9 @@ func (s *Server) CreateProduce(w http.ResponseWriter, r *http.Request) {
 
 	status := http.StatusCreated
 	switch {
-	case len(invalidProduce) > 0 && len(validProduce) > 0:
+	case len(failedProduce) > 0 && len(validProduce) > 0:
 		status = http.StatusMultiStatus
-	case len(invalidProduce) > 0 && len(validProduce) == 0:
+	case len(failedProduce) > 0 && len(validProduce) == 0:
 		// TODO decide if an error should be returned for each specific failure
 		status = http.StatusBadRequest
 	default:
