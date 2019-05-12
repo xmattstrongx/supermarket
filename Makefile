@@ -13,7 +13,7 @@ VERSION := $(shell cat VERSION)-$(VERSION_SUFFIX)
 
 ## Devflow targets
 test:
-	go test -v ./...
+	go test -v -race ./...
 
 build:
 	echo building image

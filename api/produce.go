@@ -74,12 +74,14 @@ func getQueryParams(r *http.Request) queryParameters {
 }
 
 func (s *Server) listProduce(queryParams queryParameters) ([]models.Produce, error) {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	// s.mutex.RLock()
+	// defer s.mutex.RUnlock()
 
 	var produce []models.Produce
 	for _, val := range s.data {
+		s.mutex.Lock()
 		produce = append(produce, val)
+		s.mutex.Unlock()
 	}
 
 	if queryParams.sortBy != "" {
@@ -99,6 +101,11 @@ func sortProduce(produce []models.Produce, queryParams queryParameters) []models
 	}
 
 	order := queryParams.order
+	sortBy := queryParams.sortBy
+	// if sortBy is not passed default to name
+	if sortBy == "" {
+		sortBy = QUERY_PARAM_NAME
+	}
 
 	switch strings.ToLower(queryParams.sortBy) {
 	case QUERY_PARAM_NAME:
