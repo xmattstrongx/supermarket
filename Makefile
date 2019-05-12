@@ -25,6 +25,10 @@ run:
 install:
 	go install github.com/xmattstrongx/supermarket
 
+.PHONY: swagger
+swagger:
+	docker run --rm -p 80:8080 -e "SWAGGER_JSON=/spec/swagger.yaml" -v $(CURDIR)/swagger/spec:/spec swaggerapi/swagger-ui
+
 ## CI targets
 ci-test: test
 

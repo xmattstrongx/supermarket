@@ -15,10 +15,16 @@ import (
 )
 
 const (
-	SORTED_BY = "sortBy"
+	SORTED_BY = "sort_by"
 	ORDER     = "order"
 	LIMIT     = "limit"
 	OFFSET    = "offset"
+
+	QUERY_PARAM_NAME         = "name"
+	QUERY_PARAM_PRODUCE_CODE = "producecode"
+	QUERY_PARAM_UNIT_PRICE   = "unitprice"
+	QUERY_PARAM_DESC         = "desc"
+	QUERY_PARAM_DESCENDING   = "descending"
 )
 
 type queryParameters struct {
@@ -80,26 +86,28 @@ func sortProduce(produce []models.Produce, queryParams queryParameters) []models
 		sortedProduce[i] = val
 	}
 
-	switch queryParams.sortBy {
-	case "name":
+	order := queryParams.order
+
+	switch strings.ToLower(queryParams.sortBy) {
+	case QUERY_PARAM_NAME:
 		{
-			if queryParams.order == "desc" {
+			if order == QUERY_PARAM_DESC || order == QUERY_PARAM_DESCENDING {
 				sort.Slice(sortedProduce, func(i, j int) bool { return sortedProduce[i].Name > sortedProduce[j].Name })
 			} else {
 				sort.Slice(sortedProduce, func(i, j int) bool { return sortedProduce[i].Name < sortedProduce[j].Name })
 			}
 		}
-	case "produceCode":
+	case QUERY_PARAM_PRODUCE_CODE:
 		{
-			if queryParams.order == "desc" {
+			if order == QUERY_PARAM_DESC || order == QUERY_PARAM_DESCENDING {
 				sort.Slice(sortedProduce, func(i, j int) bool { return sortedProduce[i].ProduceCode > sortedProduce[j].ProduceCode })
 			} else {
 				sort.Slice(sortedProduce, func(i, j int) bool { return sortedProduce[i].ProduceCode < sortedProduce[j].ProduceCode })
 			}
 		}
-	case "unitPrice":
+	case QUERY_PARAM_UNIT_PRICE:
 		{
-			if queryParams.order == "desc" {
+			if order == QUERY_PARAM_DESC || order == QUERY_PARAM_DESCENDING {
 				sort.Slice(sortedProduce, func(i, j int) bool { return sortedProduce[i].UnitPrice > sortedProduce[j].UnitPrice })
 			} else {
 				sort.Slice(sortedProduce, func(i, j int) bool { return sortedProduce[i].UnitPrice < sortedProduce[j].UnitPrice })
@@ -107,6 +115,7 @@ func sortProduce(produce []models.Produce, queryParams queryParameters) []models
 		}
 	}
 
+	// TODO revisit this pagination logic
 	offset, err := strconv.ParseInt(queryParams.offset, 10, 0)
 	if err != nil || offset >= int64(len(sortedProduce)) || offset < 0 {
 		offset = 0
@@ -189,14 +198,17 @@ func (s *Server) CreateProduce(w http.ResponseWriter, r *http.Request) {
 // createProduce cannot return an error in this implementation
 // however this method is part of an interface so a future implementation that uses
 // a real database would need the option to return an error
-func (s *Server) createProduce(newProduce models.Produce) (models.Produce, error) {
+func (s *Server) createProduce(produce models.Produce) (models.Produce, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	s.data[strings.ToUpper(newProduce.ProduceCode)] = models.Produce{
-		Name:        newProduce.Name,
-		ProduceCode: strings.ToUpper(newProduce.ProduceCode),
-		UnitPrice:   math.Round(newProduce.UnitPrice*100) / 100,
+	newProduce := models.Produce{
+		Name:        produce.Name,
+		ProduceCode: strings.ToUpper(produce.ProduceCode),
+		UnitPrice:   math.Round(produce.UnitPrice*100) / 100,
 	}
+
+	s.data[newProduce.ProduceCode] = newProduce
+
 	return newProduce, nil
 }
 

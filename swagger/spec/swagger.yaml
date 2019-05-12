@@ -1,0 +1,131 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Swagger Supermarket
+  license:
+    name: MIT
+servers:
+  - url: http://localhost:8080/api/v1
+paths:
+  /produce:
+    get:
+      summary: List all produce
+      operationId: listProduce
+      tags:
+        - produce
+      parameters:
+        - name: sort_by
+          in: query
+          description: which field to sort the results by
+          required: false
+          schema:
+            type: string
+            enum: 
+              - name
+              - unitprice
+              - producecode
+        - name: order
+          in: query
+          description: specify ascending or descending order. Default is Ascending.
+          required: false
+          schema:
+            type: string
+            enum: 
+              - desc
+              - descending
+        - name: limit
+          in: query
+          description: How many items to return at one time
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: offset
+          in: query
+          description: How many items to offset before the start of the returned values
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: A paged array of produce
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/Produce"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      summary: Create a pet
+      operationId: createPets
+      tags:
+        - pets
+      responses:
+        '201':
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /pets/{petId}:
+    get:
+      summary: Info for a specific pet
+      operationId: showPetById
+      tags:
+        - pets
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: The id of the pet to retrieve
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pets"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    Produce:
+      required:
+        - name
+        - produceCode
+        - unitPrice
+      properties:
+        name:
+          type: string
+        produceCode:
+          type: string
+        unitPrice:
+          type: integer
+          format: int64
+    Pets:
+      type: array
+      items:
+        $ref: "#/components/schemas/Pet"
+    Error:
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
