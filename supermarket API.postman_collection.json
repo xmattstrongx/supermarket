@@ -1,0 +1,91 @@
+{
+	"info": {
+		"_postman_id": "116a1b75-4ac6-47a1-bf85-ea27ec0addef",
+		"name": "supermarket API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "POST http://localhost:8080/api/v1/produce",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "[\n{\n    \"name\": \"one-food\",\n    \"produceCode\": \"XX1X-4GH7-QPL9-3N4M\",\n    \"unitPrice\": 1.13333\n},\n{\n    \"name\": \"two-food\",\n    \"produceCode\": \"XX2X-4GH7-QPL9-3N4M\",\n    \"unitPrice\": 1.13333\n},\n{\n    \"name\": \"three-food\",\n    \"produceCode\": \"XX3X-4GH7-QPL9-3N4M\",\n    \"unitPrice\": 1.13333\n}\n]"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/v1/produce",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"produce"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "LIST http://localhost:8080/api/v1/produce",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/v1/produce?sort_by=name",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"produce"
+					],
+					"query": [
+						{
+							"key": "sort_by",
+							"value": "name"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete http://localhost:8080/api/v1/produce/A12T-4GH7-QPL9-3N4M",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/v1/produce/A12T-4GH7-QPL9-3N4M",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"produce",
+						"A12T-4GH7-QPL9-3N4M"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
